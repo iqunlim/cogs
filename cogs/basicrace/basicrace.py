@@ -9,8 +9,7 @@ class basicrace(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
-        #both of these dicts could be combined. I could go Dict[str, (Race, datetime)]
-        self.raceset: Dict[str, Race] = {} #Contains the race objects and their opened times.
+        self.raceset: Dict[str, Race] = {}
         asyncio.get_event_loop().create_task(self.__checkfordeletion()) #Fire the garbage collection up and lets get to checkin'
         
     def __raceexists(self, name) -> bool:
@@ -42,10 +41,19 @@ class basicrace(commands.Cog):
     async def __checkfordeletion(self):
         while True:
             for key in self.raceset.keys():
-                if (datetime.now().timestamp() - self.raceset[key].opened_at.timestamp()) > 21600:
-                    self.raceset[key].stop()
-                    self.raceset.pop(key)
-                    await self.bot.send_to_owners(f"Race deleted in: {self.raceset[key].serverid}")
+                s =  self.raceset[key]
+                if ((datetime.now().timestamp() - s.opened_at.timestamp()) > 21600) and s.isfinished():
+                    s.stop()
+                    s.pop(key)
+                    await self.bot.send_to_owners(f"Race deleted in: {s.serverid}")
+                elif ((datetime.now().timestamp() - s.opened_at.timestamp()) > 3600) and s.created():
+                    s.stop()
+                    s.pop(key)
+                    await self.bot.send_to_ownwers(f"Race never started in: {s.serverid}")
+                elif ((datetime.now().timestamp() - s.opened_at.timestamp()) > 86400) and s.inprogress():
+                    s.stop()
+                    s.pop(key)
+                    await self.bot.send_to_owners(f"Race never finished in: {s.serverid}")
             await asyncio.sleep(30 * 60) #Checks every 30 mins.
             
     @commands.command()
@@ -59,7 +67,7 @@ class basicrace(commands.Cog):
             elif s.locked():
                 await ctx.send("Race is in locked state. Type !restart to run another race with the same peeps and !restartnew to restart a clean race.")
         else:
-            self.raceset[ctx.channel.id] = (Race(ctx.channel.id, ctx.message.guild.id, countdown, True if admin.lower() == "admin" else False), datetime.now())
+            self.raceset[ctx.channel.id] = Race(ctx.channel.id, ctx.message.guild.id, countdown, True if admin.lower() == "admin" else False)
             await ctx.send("Race created. !join to join and !ready when ready")
         
     @commands.command()
