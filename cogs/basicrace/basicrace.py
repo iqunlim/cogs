@@ -42,17 +42,17 @@ class basicrace(commands.Cog):
         while True:
             for key in self.raceset.keys():
                 s =  self.raceset[key]
-                if ((datetime.now().timestamp() - s.opened_at.timestamp()) > 21600) and s.isfinished():
+                if ((datetime.now().timestamp() - s.opened_at.timestamp()) > 21600) and s.locked():
                     s.stop()
-                    s.pop(key)
+                    self.raceset.pop(key)
                     await self.bot.send_to_owners(f"Race deleted in: {s.serverid}")
                 elif ((datetime.now().timestamp() - s.opened_at.timestamp()) > 3600) and s.created():
                     s.stop()
-                    s.pop(key)
+                    self.raceset.pop(key)
                     await self.bot.send_to_ownwers(f"Race never started in: {s.serverid}")
                 elif ((datetime.now().timestamp() - s.opened_at.timestamp()) > 86400) and s.inprogress():
                     s.stop()
-                    s.pop(key)
+                    self.raceset.pop(key)
                     await self.bot.send_to_owners(f"Race never finished in: {s.serverid}")
             await asyncio.sleep(30 * 60) #Checks every 30 mins.
             
@@ -209,7 +209,7 @@ class basicrace(commands.Cog):
         if self.__raceexists(ctx.channel.id):
             s = self.__race(ctx.channel.id)
             if s.locked():
-                self.restart(self, ctx, n=True)
+                self.reset(self, ctx, n=True)
                 
     
     @commands.command() 
@@ -227,6 +227,67 @@ class basicrace(commands.Cog):
                 await ctx.send(f"{timedelta(seconds=(datetime.now().timestamp() - s.timer))} has elapsed.")
         
     #TODO: More admin stuff.
-             
+    @commands.command()
+    async def status(self, ctx: commands.Context):
+        if self.__raceexists(ctx.channel.id):
+            if self.__race(ctx.channel.id).created():
+                await ctx.send("Created")
+            if self.__race(ctx.channel.id).inprogress():
+                await ctx.send("In Progress")
+            if self.__race(ctx.channel.id).isfinished():
+                await ctx.send("Finished")
+        else:
+            await ctx.send("Race is not started! Type !startrace to start.")
             
+    #Hard debuggers for bot owners only
+    @commands.command()
+    @commands.is_owner()       
+    async def dev_racedict(self, ctx:commands.Context):
+        if self.__raceexists(ctx.channel.id):
+            if len(self.__race(ctx.channel.id).finishers) > 0:
+                for x, y in self.__race(ctx.channel.id).racers.items():
+                    await ctx.send(f"{x} : {y}")
+            else:
+                await ctx.send("Nobody in this dict")
+        else:
+            await ctx.send("No race")
+            
+    @commands.command()
+    @commands.is_owner()       
+    async def dev_finishdict(self, ctx:commands.Context):
+        if self.__raceexists(ctx.channel.id):
+            if len(self.__race(ctx.channel.id).finishers) > 0:
+                for x, y in self.__race(ctx.channel.id).finishers.items():
+                    await ctx.send(f"{x} : {y}")
+            else:
+                await ctx.send("Nobody in this dict")
+        else:
+            await ctx.send("No race")
     
+    @commands.command()
+    @commands.is_owner()       
+    async def dev_getvar(self, ctx:commands.Context, variable='', channel_id=0):
+        c = ctx.channel.id if channel_id == 0 else channel_id
+        if self.__raceexists(c):
+            s = self.__race(c)
+            match variable:
+                case 'id':
+                    await ctx.send(s.id)                
+                case 'serverid':
+                    await ctx.send(s.serverid)
+                case 'internalid':
+                    await ctx.send(s.internalid)
+                case 'opened_at':
+                    await ctx.send(s.opened_at)                
+                case 'admin':
+                    await ctx.send(s.admin)
+                case 'countdown':
+                    await ctx.send(s.countdown)
+                case 'timer':
+                    await ctx.send(s.timer)                
+                case 'started':
+                    await ctx.send(s.started)
+                case 'stopped':
+                    await ctx.send(s.stopped)
+        else:
+            await ctx.send("No race for this channel.")
