@@ -11,6 +11,8 @@ from typing import Dict
 #TODO: Command helpers for all commands (!help in redbot)
 #TODO: Begin integration with postgres db. setting game on startrace and goal in race.created() state
 
+#TODO: Doing this to test github integration.
+
 class basicrace(commands.Cog):
 
     def __init__(self, bot):
