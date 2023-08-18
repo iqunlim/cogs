@@ -1,7 +1,6 @@
 from datetime import datetime, timedelta
 from typing import Dict
 
-##TODO: Set up !setgoal and things revolving around goals and games. The first set ups towards database integration.
 class Race():
     
     def __init__(self, id, serverid, countdown=15, admin=False):
@@ -39,56 +38,57 @@ class Race():
         else:
             return False
         
-    def isinrace(self, name) -> bool:
+    def __isinrace(self, name) -> bool:
         if name in self.racers.keys(): 
             return True
         return False
     
-    def isfinished(self, name) -> bool:
+    def __isfinished(self, name) -> bool:
         if name in self.finishers.keys():
             return True
         return False
      
     #Extra functions for different printing.        
     #TODO: Make this horrible function in to a 1-liner
+    #TODO: Reformat this as well. It's pretty ugly right now. Maybe on the discord side and not this side?
     def __formatdictfordiscord(self, fdict) -> str:
         printformat = "`"
         for x, y in fdict.items():
-            printformat += f"@{x} : {y}\n"
+            printformat += f"{x} : {y}\n"
         printformat += "`"
         return printformat
     
     #The meat & Potatoes.    
     def join(self, author, nick) -> str:
-        if not self.isinrace(author):
+        if not self.__isinrace(author):
             self.racers[author] = False
             return f"{nick} Joined the race."
         else:
             return "You are already in this race!"
             
     def unjoin(self, author, nick) -> str:
-        if self.isinrace(author):
+        if self.__isinrace(author):
             self.racers.pop(author)
             return f"{nick} removed from race."
         else:
             return "You are not in the race!"
             
     def ready(self, author, nick) -> str:
-        if self.isinrace(author):
+        if self.__isinrace(author):
             self.racers[author] = True
             return f"{nick} is ready!"
         else:
             return "You are not in the race!"
                     
     def unready(self, author, nick) -> str:
-        if self.isinrace(author):
+        if self.__isinrace(author):
             self.racers[author] = False 
             return f"{nick} is not ready!"
         else:
             return "You are not in the race!"
             
     def done(self, author, nick) -> str:
-        if self.isinrace(author) and not self.isfinished(author):
+        if self.__isinrace(author) and not self.__isfinished(author):
             finish = timedelta(seconds=round(datetime.now().timestamp() - self.timer))
             self.finishers[author] = finish
             if len(self.racers) == len(self.finishers):
@@ -96,12 +96,12 @@ class Race():
             return f"{nick} Finished in {finish}"
         
     def undone(self, author, nick) -> str:
-        if self.isfinished(author):
+        if self.__isfinished(author):
             self.finishers.pop(author)
             return f"{nick} undoned."
             
     def quit(self, author, nick) -> str:
-        if self.isinrace(author):
+        if self.__isinrace(author):
             self.finishers[author] = 'DNF'
             if len(self.racers) == len(self.finishers):
                 self.stopped = True
