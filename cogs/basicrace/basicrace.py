@@ -1,4 +1,5 @@
 from redbot.core import commands
+from redbot.core.bot import Red
 from datetime import datetime, timedelta
 import asyncio
 from .race.race import Race
@@ -11,11 +12,9 @@ from typing import Dict
 #TODO: Command helpers for all commands (!help in redbot)
 #TODO: Begin integration with postgres db. setting game on startrace and goal in race.created() state
 
-#TODO: Doing this to test github integration.
-
 class basicrace(commands.Cog):
 
-    def __init__(self, bot):
+    def __init__(self, bot: Red):
         self.bot = bot
         self.raceset: Dict[str, Race] = {}
         asyncio.get_event_loop().create_task(self.__checkfordeletion()) #Fire the garbage collection up and lets get to checkin'
@@ -48,6 +47,11 @@ class basicrace(commands.Cog):
                 break
             countdownnum -= 1
             await asyncio.sleep(1)
+            
+    async def __keepalive(self):
+        while True:
+            await self.bot.send_to_owners("Beep")
+            await asyncio.sleep(5 * 60)
     
     async def __checkfordeletion(self):
         while True:
@@ -204,7 +208,6 @@ class basicrace(commands.Cog):
     @commands.admin_or_can_manage_channel()           
     async def forceclose(self, ctx: commands.Context, c='no'):
         if self.raceexists(ctx.channel.id):
-            s = self.race(ctx.channel.id)
             if c == 'yes':
                 self.raceset.pop(ctx.channel.id)
                 await ctx.send("Race Forcibly deleted. Type !startrace to restart.")
