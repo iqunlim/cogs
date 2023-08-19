@@ -3,6 +3,7 @@ from redbot.core.bot import Red
 from datetime import datetime, timedelta
 import asyncio
 from .race.race import Race
+from discord.ext import tasks
 from typing import Dict
 
 
@@ -17,7 +18,7 @@ class basicrace(commands.Cog):
     def __init__(self, bot: Red):
         self.bot = bot
         self.raceset: Dict[str, Race] = {}
-        asyncio.get_event_loop().create_task(self.__checkfordeletion()) #Fire the garbage collection up and lets get to checkin'
+        self.__checkfordeletion.start() #The cooler better way to start a loop function in discord.py.
         
     def raceexists(self, name) -> bool:
         if name in self.raceset.keys():
@@ -52,21 +53,20 @@ class basicrace(commands.Cog):
         while True:
             await self.bot.send_to_owners("Beep")
             await asyncio.sleep(5 * 60)
-    
+            
+    @tasks.loop(minutes=30) #The decorator that makes it all possible. Take note for future projects.
     async def __checkfordeletion(self):
-        while True:
-            for key in self.raceset.keys():
-                s =  self.raceset[key]
-                if ((datetime.now().timestamp() - s.opened_at.timestamp()) > 21600) and s.locked():
-                    self.raceset.pop(key)
-                    await self.bot.send_to_owners(f"Race deleted in: {s.serverid}")
-                elif ((datetime.now().timestamp() - s.opened_at.timestamp()) > 3600) and s.created():
-                    self.raceset.pop(key)
-                    await self.bot.send_to_ownwers(f"Race never started in: {s.serverid}")
-                elif ((datetime.now().timestamp() - s.opened_at.timestamp()) > 86400) and s.inprogress():
-                    self.raceset.pop(key)
-                    await self.bot.send_to_owners(f"Race never finished in: {s.serverid}")
-            await asyncio.sleep(30 * 60) #Checks every 30 mins.
+        for key in self.raceset.keys():
+            s = self.raceset[key]
+            if ((datetime.now().timestamp() - s.opened_at.timestamp()) > 21600) and s.locked():
+                self.raceset.pop(key)
+                await self.bot.send_to_owners(f"Race deleted in: {s.serverid}")
+            elif ((datetime.now().timestamp() - s.opened_at.timestamp()) > 3600) and s.created():
+                self.raceset.pop(key)
+                await self.bot.send_to_ownwers(f"Race never started in: {s.serverid}")
+            elif ((datetime.now().timestamp() - s.opened_at.timestamp()) > 86400) and s.inprogress():
+                self.raceset.pop(key)
+                await self.bot.send_to_owners(f"Race never finished in: {s.serverid}")
             
     @commands.command()
     async def startrace(self, ctx: commands.Context, countdown=15, admin="notadmin"):
@@ -302,3 +302,7 @@ class basicrace(commands.Cog):
                     await ctx.send(s.stopped)
         else:
             await ctx.send("No race for this channel.")
+            
+    def cog_unload(self):
+        #Kill any looped functions 
+        self.__checkfordeletion.cancel()

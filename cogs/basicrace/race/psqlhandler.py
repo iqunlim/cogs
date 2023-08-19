@@ -1,9 +1,12 @@
 import pandas as pd
 import sqlalchemy as db
+import asyncio, asyncpg #asyncpg investigation for later async functions for psql.
 from typing import (
     Dict,
     Optional,
 )
+
+
 
 class NotInDefaults(Exception):
     """Handling a lack of connection info. Practice with working with exception handling and generators.\n
@@ -44,7 +47,7 @@ class PandasPSQL:
         
         #Test url string before continuing
         if not self._testcon():
-            raise Exception(f"Cannot connect to SQL Database at {connectioninfo['DOMAIN']}")
+            raise ConnectionError(f"Cannot connect to SQL Database at {connectioninfo['DOMAIN']}")
         
     #do i need this? Maybe.
     #can this be done better? Oh yeah for sure.
@@ -69,20 +72,19 @@ class PandasPSQL:
             conn.close()
 
     def replace(self, df: pd.DataFrame, table: str) -> None:
-        conn = db.create_engine(self.url).connect()
+        conn = db.create_engine(self.url).begin()
         try:
             df.to_sql(table, conn, schema=self.schema, if_exists="replace", index=False) #setting index=False since I prefer to write the primary key myself.
-            conn.commit()
-        finally:
-            conn.close()
+        except:
+            pass #TODO: Custom error
+
     
     def append(self, df: pd.DataFrame, table: str) -> None:
-        conn = db.create_engine(self.url).connect()
+        conn = db.create_engine(self.url).begin()
         try:
             df.to_sql(table, conn, schema=self.schema, if_exists="append", index=False)
-            conn.commit()
-        finally:
-            conn.close()
+        except:
+            pass #TODO: Custom error.
     
     #TODO: This cant be done with dataframes so it will be a generic delete function for postgres.
     #Question: Do I even need this?         
